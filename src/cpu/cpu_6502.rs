@@ -1,6 +1,8 @@
 //! https://www.pagetable.com/c64ref/6502/?tab=2
 //! https://github.com/lukexor/tetanes
 
+use crate::cpu::instructions;
+
 use super::flags::Status;
 
 const RAM_SIZE: usize = 0xFFFF;
@@ -36,6 +38,20 @@ impl CPU {
         self.register_x = 0;
         self.register_y = 0;
         self.register_a = 0;
+    }
+
+    pub fn load(&mut self, rom: &[u8]) {
+        self.ram[0x600..0x600 + rom.len()].copy_from_slice(rom);
+    }
+
+    pub fn tick(&mut self) {
+        let instr = instructions::decode(self.ram[self.pc as usize]);
+        println!(
+            "{:#04x}: A {:#x}, X {:#x}, Y {:#x}, {}",
+            self.pc, self.register_a, self.register_x, self.register_y, instr.name
+        );
+        (instr.function)(self, &instr.mode);
+        self.pc += instr.mode.len();
     }
 
     /// pop a byte from the stack

@@ -1,6 +1,7 @@
-use super::CPU;
-
 /// https://www.nesdev.org/obelisk-6502-guide/addressing.html
+
+use super::cpu_6502::CPU;
+
 #[derive(Debug)]
 pub enum AddressingMode {
     Implied,
