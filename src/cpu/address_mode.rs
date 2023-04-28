@@ -26,19 +26,31 @@ impl AddressingMode {
             // Dont actually have any arguments
             Self::Implied => 0,
             Self::Accumulator => 0,
-
             Self::Relative => {
                 let after_param = cpu.pc + self.len();
                 let offset = cpu.read_byte(after_opcode) as i8;
                 after_param + offset as u16
             }
-
             Self::ZeroPage => cpu.read_byte(after_opcode) as u16,
             Self::ZeroPageX => cpu.read_byte(after_opcode) as u16 + cpu.register_x as u16,
             Self::ZeroPageY => cpu.read_byte(after_opcode) as u16 + cpu.register_y as u16,
-
             Self::Immediate => after_opcode,
             Self::Absolute => cpu.read_word(after_opcode),
+            Self::Indirect => {
+                 let ptr = cpu.read_word(after_opcode);
+                let low = cpu.read_byte(ptr);
+
+                // Accomodate for a hardware bug, the 6502 reference states the following:
+                //    "An original 6502 has does not correctly fetch the target address if the indirect vector
+                //    falls on a page boundary (e.g. $xxFF where xx is any value from $00 to $FF). In this case
+                //    it fetches the LSB from $xxFF as expected but takes the MSB from $xx00"
+                let high = if ptr & 0x00FF == 0xFF {
+                    cpu.read_byte(ptr & 0xFF00)
+                } else {
+                    cpu.read_byte(ptr.wrapping_add(1))
+                };
+                u16::from_le_bytes([low, high])
+            }
 
             _ => todo!(),
         }

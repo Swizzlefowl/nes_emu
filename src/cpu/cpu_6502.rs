@@ -27,7 +27,7 @@ impl CPU {
             status: Status::default()
                 .with_interrupt_disable(true)
                 .with_carry(true),
-            pc: 0,
+            pc: 0x600,
             sp: 0xFD,
             ram: [0; RAM_SIZE]
         }

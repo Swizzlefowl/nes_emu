@@ -28,15 +28,60 @@ impl CPU {
     }
 
     pub fn lda(&mut self, addr: &AddressingMode) {
-        self.register_a = addr.fetch_argument(self);
+        self.register_a = self.ram[addr.fetch_argument_address(self) as usize];
         self.status.set_zero(self.register_a == 0);
-        self.status.set_negative(nth_bit(self.register_x, 7))
+        self.status.set_negative(nth_bit(self.register_x, 7));
+        println!(
+            "arg:: {}",
+            self.ram[addr.fetch_argument_address(self) as usize]
+        )
     }
 
-    //NOP - No Operation
-    pub fn nop(&mut self, _____________addr: &AddressingMode) {}
+    pub fn and(&mut self, addr: &AddressingMode) {
+        self.register_a &= addr.fetch_argument(self);
+        self.status.set_zero(self.register_a == 0);
+        self.status.set_negative(nth_bit(self.register_x, 7));
+        println!(
+            "arg:: {}",
+            self.ram[addr.fetch_argument_address(self) as usize]
+        )
+    }
+    // CLC - Clear Carry Flag
+    pub fn clc(&mut self, addr: &AddressingMode) {
+        self.status.set_carry(false);
+    }
 
-    pub fn brk(&mut self, _____________addr: &AddressingMode) {}
+    // ADC - Add Memory to Accumulator with Carry
+    pub fn adc(&mut self, addr: &AddressingMode) {
+        let (data, overflow) = self.register_a.overflowing_add(addr.fetch_argument(self));
+        self.status.set_carry(overflow);
+        self.status.set_overflow(overflow);
+        self.status.set_negative(nth_bit(data, 7));
+        self.register_a = data
+    }
+
+    //STA - Store Accumulator in Memory
+    pub fn sta(&mut self, addr: &AddressingMode) {
+        self.ram[addr.fetch_argument_address(self) as usize] = self.register_a;
+    }
+
+    //RTS - Return From Subroutme
+    pub fn rts(&mut self, addr: &AddressingMode) {
+        self.pc = self.pop_word();
+        self.pc += 1;
+    }
+
+    //SEC - Set Carry Flag
+     pub fn sec(&mut self, addr: &AddressingMode) {
+        self.status.set_carry(true);
+     }
+     //ASL - Arithmetic Shift Left
+     
+
+    //NOP - No Operation
+    pub fn nop(&mut self, addr: &AddressingMode) {}
+
+    pub fn brk(&mut self, addr: &AddressingMode) {}
 }
 
 pub struct Instruction {
@@ -63,8 +108,30 @@ pub fn decode(opcode: u8) -> Instruction {
     match opcode {
         0xEA => Instruction::new("NOP", CPU::nop, AddressingMode::Implied),
         0x00 => Instruction::new("BRK", CPU::brk, AddressingMode::Implied),
-
+        0x29 => Instruction::new("AND", CPU::and, AddressingMode::Immediate),
+        0x18 => Instruction::new("CLC", CPU::clc, AddressingMode::Implied),
+        0x38 => Instruction::new("SEC", CPU::sec, AddressingMode::Implied),
+        0x4C => Instruction::new("JMP", CPU::jmp, AddressingMode::Absolute),
+        0x6C => Instruction::new("JMP", CPU::jmp, AddressingMode::Indirect),
         0x20 => Instruction::new("JSR", CPU::jsr, AddressingMode::Absolute),
+        0x60 => Instruction::new("RTS", CPU::rts, AddressingMode::Implied),
+
+        0x69 => Instruction::new("ADC", CPU::adc, AddressingMode::Immediate),
+        0x65 => Instruction::new("ADC", CPU::adc, AddressingMode::ZeroPage),
+        0x75 => Instruction::new("ADC", CPU::adc, AddressingMode::ZeroPageX),
+        0x6D => Instruction::new("ADC", CPU::adc, AddressingMode::Absolute),
+        0x7D => Instruction::new("ADC", CPU::adc, AddressingMode::AbsoluteX),
+        0x79 => Instruction::new("ADC", CPU::adc, AddressingMode::AbsoluteY),
+        0x61 => Instruction::new("ADC", CPU::adc, AddressingMode::IndirectX),
+        0x71 => Instruction::new("ADC", CPU::adc, AddressingMode::IndirectY),
+
+         0x85 => Instruction::new("STA", CPU::sta,  AddressingMode::ZeroPage),
+         0x95 => Instruction::new("STA", CPU::sta,  AddressingMode::ZeroPageX),
+         0x8D => Instruction::new("STA", CPU::sta,  AddressingMode::Absolute),
+         0x9D => Instruction::new("STA", CPU::sta,  AddressingMode::AbsoluteX),
+         0x99 => Instruction::new("STA", CPU::sta,  AddressingMode::AbsoluteY),
+         0x81 => Instruction::new("STA", CPU::sta,  AddressingMode::IndirectX),
+         0x91 => Instruction::new("STA", CPU::sta,  AddressingMode::IndirectY),
 
         0x2A => Instruction::new("LDX", CPU::ldx, AddressingMode::Immediate),
         0xA6 => Instruction::new("LDX", CPU::ldx, AddressingMode::ZeroPage),
